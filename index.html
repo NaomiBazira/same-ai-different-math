@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Same AI, Different Math</title>
+<meta name="description" content="AI Scale-or-Stop Decision System: the same AI tool can be worth it in Atlanta and not in Casablanca.">
+<style>
+  :root {
+    --plum: #4A2C38;
+    --plum-soft: #6E4A59;
+    --blossom: #FFB7C5;
+    --blossom-light: #FFF0F3;
+    --blossom-deep: #C2456A;
+    --line: #EBD3DA;
+    --green: #1E7B3A;
+    --green-bg: #E6F4EA;
+    --amber: #7A4F00;
+    --amber-bg: #FFF1CC;
+    --amber-border: #D99A00;
+    --red: #B42318;
+    --red-bg: #FDECEA;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: #fff;
+    color: var(--plum);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  h1, h2, h3 { font-family: "Times New Roman", Times, serif; line-height: 1.15; margin: 0; }
+  main { max-width: 60rem; margin: 0 auto; padding: 1.25rem 1rem 2rem; }
+
+  header.top { text-align: center; padding: 1rem 0 1.25rem; }
+  header.top .petal { font-size: 1.5rem; color: var(--blossom-deep); }
+  h1 { font-size: clamp(2rem, 7vw, 3rem); }
+  .subtitle { margin: .5rem auto 0; max-width: 36rem; font-size: 1.05rem; color: var(--plum-soft); }
+
+  section { margin-top: 1.75rem; }
+  h2 {
+    font-size: 1.5rem;
+    padding-bottom: .35rem;
+    border-bottom: 3px solid var(--blossom);
+    margin-bottom: 1rem;
+  }
+  h3 { font-size: 1.3rem; }
+
+  .panel {
+    border: 2px solid var(--blossom);
+    border-radius: 1rem;
+    padding: 1rem;
+    background: #fff;
+  }
+  .fields { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+  .field label { display: block; font-weight: 600; font-size: .95rem; margin-bottom: .3rem; }
+  .field input {
+    width: 100%;
+    min-height: 2.9rem;
+    font: inherit;
+    font-size: 1.1rem;
+    color: var(--plum);
+    padding: .5rem .75rem;
+    border: 2px solid var(--line);
+    border-radius: .6rem;
+    background: #fff;
+  }
+  .field input:focus { outline: 3px solid var(--blossom-deep); outline-offset: 1px; border-color: var(--blossom-deep); }
+  .hint { font-size: .85rem; color: var(--plum-soft); margin-top: .2rem; }
+
+  .cities { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+  @media (min-width: 40rem) { .cities { grid-template-columns: 1fr 1fr; } }
+  .city h3 { margin-bottom: .75rem; }
+  .city .fields { grid-template-columns: 1fr; }
+
+  .result-card { background: var(--blossom-light); }
+  .result-card h3 { margin-bottom: .5rem; }
+  .rows { margin: 0; }
+  .rows div { display: flex; justify-content: space-between; gap: 1rem; padding: .45rem 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .rows dt { font-weight: 500; }
+  .rows dd { margin: 0; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+  .neg { color: var(--red); }
+  .pos { color: var(--green); }
+
+  .verdict { margin-top: 1rem; border-radius: .9rem; padding: .9rem 1rem; border: 2px solid; }
+  .badge {
+    display: inline-block;
+    font-family: "Times New Roman", Times, serif;
+    font-weight: 700;
+    font-size: 2rem;
+    letter-spacing: .08em;
+    padding: .1rem .9rem;
+    border-radius: .6rem;
+    color: #fff;
+  }
+  .reason { margin: .6rem 0 0; font-size: 1rem; }
+  .v-SCALE { background: var(--green-bg); border-color: var(--green); }
+  .v-SCALE .badge { background: var(--green); }
+  .v-FIX { background: var(--amber-bg); border-color: var(--amber-border); }
+  .v-FIX .badge { background: var(--amber); }
+  .v-STOP { background: var(--red-bg); border-color: var(--red); }
+  .v-STOP .badge { background: var(--red); }
+
+  .chart-wrap { width: 100%; }
+  #chart { display: block; width: 100%; height: auto; }
+  #chart text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; fill: var(--plum); font-size: 13px; }
+  #chart .halo { paint-order: stroke; stroke: #fff; stroke-width: 4px; stroke-linejoin: round; }
+  .legend { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-top: .6rem; font-size: .95rem; padding: 0; list-style: none; }
+  .legend li { display: flex; align-items: center; gap: .4rem; }
+  .sw { display: inline-block; width: 1.8rem; height: 0; border-top: 4px solid var(--plum); }
+  .sw.ai { border-top: 4px dashed var(--blossom-deep); }
+  .sw.be { border-top: 2px dotted var(--plum-soft); }
+  .chart-note { font-size: .9rem; color: var(--plum-soft); margin: .4rem 0 0; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-start; margin-top: 1.75rem; }
+  button {
+    font: inherit;
+    font-weight: 700;
+    min-height: 2.9rem;
+    padding: .55rem 1.2rem;
+    border-radius: 999px;
+    border: 2px solid var(--plum);
+    background: var(--blossom);
+    color: var(--plum);
+    cursor: pointer;
+  }
+  button:hover { background: #FFA3B5; }
+  button:focus-visible, summary:focus-visible { outline: 3px solid var(--blossom-deep); outline-offset: 2px; }
+
+  details { border: 2px solid var(--blossom); border-radius: 1rem; padding: .25rem 1rem; margin-top: 1rem; }
+  summary { cursor: pointer; font-weight: 700; padding: .6rem 0; min-height: 2.75rem; font-family: "Times New Roman", Times, serif; font-size: 1.2rem; }
+  details ul { padding-left: 1.2rem; }
+  details li { margin-bottom: .5rem; }
+
+  footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 3px solid var(--blossom); text-align: center; font-size: .9rem; color: var(--plum-soft); }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+  fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div class="petal" aria-hidden="true">&#x2740;</div>
+    <h1>Same AI, Different Math</h1>
+    <p class="subtitle">Should SAP use the same AI tool for billing questions in Atlanta and Casablanca?</p>
+  </header>
+
+  <section aria-labelledby="h-ai">
+    <h2 id="h-ai">The AI (same in both cities)</h2>
+    <fieldset class="panel">
+      <legend class="sr-only">Shared AI settings</legend>
+      <div class="fields">
+        <div class="field">
+          <label for="aiPrice">AI cost per task (USD)</label>
+          <input id="aiPrice" type="number" inputmode="decimal" min="0" step="0.01">
+        </div>
+        <div class="field">
+          <label for="reviewMinutes">Minutes a person spends checking each AI answer</label>
+          <input id="reviewMinutes" type="number" inputmode="decimal" min="0" step="0.5">
+        </div>
+        <div class="field">
+          <label for="errorRate">AI error rate (%)</label>
+          <input id="errorRate" type="number" inputmode="decimal" min="0" max="100" step="1">
+        </div>
+        <div class="field">
+          <label for="fixMinutes">Minutes to fix each AI error</label>
+          <input id="fixMinutes" type="number" inputmode="decimal" min="0" step="0.5">
+        </div>
+        <div class="field">
+          <label for="maxErrorRate">Maximum acceptable error rate (%)</label>
+          <input id="maxErrorRate" type="number" inputmode="decimal" min="0" max="100" step="1">
+        </div>
+      </div>
+    </fieldset>
+  </section>
+
+  <section aria-labelledby="h-people">
+    <h2 id="h-people">The people (different in each city)</h2>
+    <div class="cities">
+      <fieldset class="panel city">
+        <legend class="sr-only">Atlanta</legend>
+        <h3 aria-hidden="true">Atlanta, USA</h3>
+        <div class="fields">
+          <div class="field">
+            <label for="atl-wage">Atlanta hourly wage (USD)</label>
+            <input id="atl-wage" type="number" inputmode="decimal" min="0" step="0.5">
+          </div>
+          <div class="field">
+            <label for="atl-minutes">Atlanta: minutes to answer one billing question without AI</label>
+            <input id="atl-minutes" type="number" inputmode="decimal" min="0" step="0.5">
+          </div>
+        </div>
+      </fieldset>
+      <fieldset class="panel city">
+        <legend class="sr-only">Casablanca</legend>
+        <h3 aria-hidden="true">Casablanca, Morocco</h3>
+        <div class="fields">
+          <div class="field">
+            <label for="cas-wage">Casablanca hourly wage (USD)</label>
+            <input id="cas-wage" type="number" inputmode="decimal" min="0" step="0.5">
+          </div>
+          <div class="field">
+            <label for="cas-minutes">Casablanca: minutes to answer one billing question without AI</label>
+            <input id="cas-minutes" type="number" inputmode="decimal" min="0" step="0.5">
+          </div>
+        </div>
+      </fieldset>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-results">
+    <h2 id="h-results">Results</h2>
+    <div class="cities">
+      <article class="panel result-card" id="atl-card" aria-live="polite"></article>
+      <article class="panel result-card" id="cas-card" aria-live="polite"></article>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-chart">
+    <h2 id="h-chart">Cost per task as wages change</h2>
+    <div class="panel">
+      <div class="chart-wrap" id="chartWrap">
+        <svg id="chart" role="img" aria-labelledby="chartTitle chartDesc">
+          <title id="chartTitle">Total cost per task versus hourly wage</title>
+          <desc id="chartDesc"></desc>
+        </svg>
+      </div>
+      <ul class="legend" aria-hidden="true">
+        <li><span class="sw"></span>Person alone</li>
+        <li><span class="sw ai"></span>AI + checking</li>
+        <li><span class="sw be"></span>Break-even wage</li>
+      </ul>
+      <p class="chart-note" id="chartNote"></p>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button type="button" id="resetBtn">Reset to example numbers</button>
+  </div>
+
+  <details>
+    <summary>How it works</summary>
+    <ul>
+      <li><strong>Person alone:</strong> the minutes a person needs for one question, turned into hours, times their hourly wage.</li>
+      <li><strong>AI + checking:</strong> what the AI charges per task, plus the person's time to check every answer, plus the time to fix the share of answers that are wrong. All of that people-time is paid at the local wage.</li>
+      <li><strong>Savings:</strong> how much cheaper (or more expensive) AI + checking is compared with the person alone.</li>
+      <li><strong>Break-even wage:</strong> the AI price stays the same everywhere, but the time AI saves is only worth as much as local wages. The break-even wage is where the saved time exactly pays for the AI price. Above it, AI wins; below it, the person is cheaper. If checking and fixing take as long as doing the task, AI can never break even.</li>
+      <li><strong>Verdict:</strong> <strong>SCALE</strong> when AI is cheaper <em>and</em> its error rate is within your limit. <strong>FIX</strong> when only one of those is true. <strong>STOP</strong> when neither is.</li>
+    </ul>
+  </details>
+
+  <footer>
+    <p>Prototype with example numbers, not research findings. Team GSU x ESCA, Aspen CUIBE MENA Global Case Competition, Fall 2026.</p>
+  </footer>
+</main>
+
+<script>
+/* BEGIN FORMULAS */
+var DEFAULTS = {
+  aiPrice: 0.20, reviewMinutes: 2, errorRate: 10, fixMinutes: 5, maxErrorRate: 10,
+  atl: { wage: 22, minutes: 6 },
+  cas: { wage: 3, minutes: 6 }
+};
+
+// Turn any input into a safe, non-negative number (optionally capped).
+function sanitize(value, max) {
+  var n = typeof value === "number" ? value : parseFloat(value);
+  if (!isFinite(n) || n < 0) n = 0;
+  if (typeof max === "number" && n > max) n = max;
+  return n;
+}
+
+function humanCost(humanMinutes, wage) {
+  return (humanMinutes / 60) * wage;
+}
+
+function aiCost(aiPrice, reviewMinutes, errorRate, fixMinutes, wage) {
+  return aiPrice + (reviewMinutes / 60) * wage + (errorRate / 100) * (fixMinutes / 60) * wage;
+}
+
+// Percent saved by using AI; null when the person costs $0 (no meaningful %).
+function savingsPct(human, ai) {
+  if (!(human > 0)) return null;
+  return (human - ai) / human * 100;
+}
+
+// Wage at which AI + checking costs exactly the same as a person alone.
+// null means AI never breaks even (checking + fixing takes as long as the task).
+function breakEvenWage(aiPrice, humanMinutes, reviewMinutes, errorRate, fixMinutes) {
+  var hoursSaved = (humanMinutes - reviewMinutes - (errorRate / 100) * fixMinutes) / 60;
+  if (!(hoursSaved > 0)) return null;
+  return aiPrice / hoursSaved;
+}
+
+function verdict(cheaper, qualityOK) {
+  if (cheaper && qualityOK) return "SCALE";
+  if (cheaper || qualityOK) return "FIX";
+  return "STOP";
+}
+
+function computeCity(shared, city) {
+  var h = humanCost(city.minutes, city.wage);
+  var a = aiCost(shared.aiPrice, shared.reviewMinutes, shared.errorRate, shared.fixMinutes, city.wage);
+  var cheaper = a < h;
+  var qualityOK = shared.errorRate <= shared.maxErrorRate;
+  return {
+    wage: city.wage,
+    humanCost: h,
+    aiCost: a,
+    savingsUsd: h - a,
+    savingsPct: savingsPct(h, a),
+    breakEven: breakEvenWage(shared.aiPrice, city.minutes, shared.reviewMinutes, shared.errorRate, shared.fixMinutes),
+    cheaper: cheaper,
+    qualityOK: qualityOK,
+    verdict: verdict(cheaper, qualityOK)
+  };
+}
+
+function fmtMoney(x) {
+  var v = Math.round(Math.abs(x) * 100) / 100;
+  return (x < 0 && v > 0 ? "-" : "") + "$" + v.toFixed(2);
+}
+/* END FORMULAS */
+
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var ids = ["aiPrice", "reviewMinutes", "errorRate", "fixMinutes", "maxErrorRate", "atl-wage", "atl-minutes", "cas-wage", "cas-minutes"];
+  var pctIds = { errorRate: true, maxErrorRate: true };
+
+  function fill() {
+    $("aiPrice").value = DEFAULTS.aiPrice.toFixed(2);
+    $("reviewMinutes").value = DEFAULTS.reviewMinutes;
+    $("errorRate").value = DEFAULTS.errorRate;
+    $("fixMinutes").value = DEFAULTS.fixMinutes;
+    $("maxErrorRate").value = DEFAULTS.maxErrorRate;
+    $("atl-wage").value = DEFAULTS.atl.wage;
+    $("atl-minutes").value = DEFAULTS.atl.minutes;
+    $("cas-wage").value = DEFAULTS.cas.wage;
+    $("cas-minutes").value = DEFAULTS.cas.minutes;
+  }
+
+  function read(id) { return sanitize($(id).value, pctIds[id] ? 100 : undefined); }
+
+  function getState() {
+    return {
+      shared: {
+        aiPrice: read("aiPrice"), reviewMinutes: read("reviewMinutes"), errorRate: read("errorRate"),
+        fixMinutes: read("fixMinutes"), maxErrorRate: read("maxErrorRate")
+      },
+      atl: { wage: read("atl-wage"), minutes: read("atl-minutes") },
+      cas: { wage: read("cas-wage"), minutes: read("cas-minutes") }
+    };
+  }
+
+  function fmtPct(p) { return (Math.round(p * 10) / 10).toFixed(1) + "%"; }
+  function fmtWage(w) { return fmtMoney(w) + "/hour"; }
+
+  function reasonFor(r, shared, cityName) {
+    var gap = fmtMoney(Math.abs(r.savingsUsd));
+    var costPart;
+    if (r.cheaper) costPart = "AI + checking is " + gap + " cheaper per task than a person at " + fmtWage(r.wage);
+    else if (Math.abs(r.savingsUsd) < 0.005) costPart = "AI + checking costs the same as a person at " + fmtWage(r.wage);
+    else costPart = "a person at " + fmtWage(r.wage) + " is " + gap + " cheaper per task than AI + checking";
+    var qPart = r.qualityOK
+      ? "the " + shared.errorRate + "% error rate is within the " + shared.maxErrorRate + "% limit"
+      : "the " + shared.errorRate + "% error rate is above the " + shared.maxErrorRate + "% limit";
+    var cap = function (s) { return s.charAt(0).toUpperCase() + s.slice(1); };
+    if (r.verdict === "SCALE") return "Roll it out in " + cityName + ": " + costPart + ", and " + qPart + ".";
+    if (r.verdict === "FIX" && r.cheaper) return "Fix quality first: " + costPart + ", but " + qPart + ".";
+    if (r.verdict === "FIX") return "Fix the cost first: " + qPart + ", but " + costPart + ".";
+    return "Don't use it in " + cityName + ": " + costPart + ", and " + qPart + ".";
+  }
+
+  function renderCard(el, title, r, shared) {
+    var sav;
+    if (r.savingsPct === null) {
+      sav = r.aiCost > 0 ? '<span class="neg">AI costs ' + fmtMoney(r.aiCost) + ' more (person is free)</span>' : "$0.00 (both free)";
+    } else if (r.savingsUsd >= 0) {
+      sav = '<span class="pos">' + fmtPct(r.savingsPct) + " (" + fmtMoney(r.savingsUsd) + " per task)</span>";
+    } else {
+      sav = '<span class="neg">' + fmtPct(r.savingsPct) + " (AI costs " + fmtMoney(-r.savingsUsd) + " more)</span>";
+    }
+    var be = r.breakEven === null
+      ? "AI never breaks even: checking takes as long as doing the task."
+      : fmtWage(r.breakEven);
+    el.innerHTML =
+      "<h3>" + title + "</h3>" +
+      '<dl class="rows">' +
+        "<div><dt>Human cost per task</dt><dd>" + fmtMoney(r.humanCost) + "</dd></div>" +
+        "<div><dt>AI cost per task</dt><dd>" + fmtMoney(r.aiCost) + "</dd></div>" +
+        "<div><dt>Savings</dt><dd>" + sav + "</dd></div>" +
+        "<div><dt>Break-even wage</dt><dd>" + be + "</dd></div>" +
+      "</dl>" +
+      '<div class="verdict v-' + r.verdict + '">' +
+        '<span class="badge">' + r.verdict + "</span>" +
+        '<p class="reason">' + reasonFor(r, shared, title.split(",")[0]) + "</p>" +
+      "</div>";
+  }
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function node(tag, attrs, text) {
+    var n = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function niceStep(max, ticks) {
+    var raw = max / ticks;
+    var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    var steps = [1, 2, 2.5, 5, 10];
+    for (var i = 0; i < steps.length; i++) if (steps[i] * mag >= raw) return steps[i] * mag;
+    return 10 * mag;
+  }
+
+  function renderChart(state, atl, cas) {
+    var svg = $("chart");
+    var W = Math.max(300, Math.round($("chartWrap").clientWidth || 600));
+    var H = Math.round(Math.min(400, Math.max(260, W * 0.62)));
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.setAttribute("width", W);
+    svg.setAttribute("height", H);
+    while (svg.lastChild && svg.lastChild.nodeName !== "desc") svg.removeChild(svg.lastChild);
+
+    var s = state.shared;
+    var mins = state.atl.minutes;
+    var xMax = Math.max(40, Math.ceil(Math.max(state.atl.wage, state.cas.wage) / 10) * 10);
+    var person = function (w) { return humanCost(mins, w); };
+    var ai = function (w) { return aiCost(s.aiPrice, s.reviewMinutes, s.errorRate, s.fixMinutes, w); };
+    var yTop = Math.max(person(xMax), ai(xMax), ai(0), 0.1);
+    var yStep = niceStep(yTop, 5);
+    var yMax = Math.ceil(yTop / yStep) * yStep;
+
+    var m = { l: 52, r: 14, t: 30, b: 44 };
+    var pw = W - m.l - m.r, ph = H - m.t - m.b;
+    var X = function (w) { return m.l + (w / xMax) * pw; };
+    var Y = function (c) { return m.t + ph - (c / yMax) * ph; };
+
+    var g = node("g", {});
+    svg.appendChild(g);
+
+    // grid + y ticks
+    for (var v = 0; v <= yMax + 1e-9; v += yStep) {
+      g.appendChild(node("line", { x1: m.l, x2: m.l + pw, y1: Y(v), y2: Y(v), stroke: "#F3E1E6", "stroke-width": 1 }));
+      g.appendChild(node("text", { x: m.l - 6, y: Y(v) + 4, "text-anchor": "end" }, fmtMoney(v)));
+    }
+    // x ticks
+    var xStep = xMax <= 40 ? 10 : niceStep(xMax, 4);
+    for (var w = 0; w <= xMax + 1e-9; w += xStep) {
+      g.appendChild(node("line", { x1: X(w), x2: X(w), y1: m.t + ph, y2: m.t + ph + 5, stroke: "#4A2C38" }));
+      g.appendChild(node("text", { x: X(w), y: m.t + ph + 19, "text-anchor": "middle" }, "$" + w));
+    }
+    g.appendChild(node("line", { x1: m.l, x2: m.l + pw, y1: m.t + ph, y2: m.t + ph, stroke: "#4A2C38", "stroke-width": 1.5 }));
+    g.appendChild(node("line", { x1: m.l, x2: m.l, y1: m.t, y2: m.t + ph, stroke: "#4A2C38", "stroke-width": 1.5 }));
+    g.appendChild(node("text", { x: m.l + pw / 2, y: H - 6, "text-anchor": "middle" }, "Hourly wage (USD)"));
+    g.appendChild(node("text", { x: 4, y: 16 }, "Cost per task"));
+
+    // break-even marker
+    var be = breakEvenWage(s.aiPrice, mins, s.reviewMinutes, s.errorRate, s.fixMinutes);
+    if (be !== null && be <= xMax) {
+      g.appendChild(node("line", { x1: X(be), x2: X(be), y1: m.t, y2: m.t + ph, stroke: "#6E4A59", "stroke-width": 2, "stroke-dasharray": "2 4" }));
+      var beLeft = X(be) > m.l + pw * 0.6;
+      g.appendChild(node("text", { x: X(be) + (beLeft ? -6 : 6), y: m.t + 14, "text-anchor": beLeft ? "end" : "start", "font-weight": 700, "class": "halo" }, "Break-even " + fmtMoney(be) + "/h"));
+    }
+
+    // lines
+    g.appendChild(node("line", { x1: X(0), y1: Y(person(0)), x2: X(xMax), y2: Y(person(xMax)), stroke: "#4A2C38", "stroke-width": 3.5, "stroke-linecap": "round" }));
+    g.appendChild(node("line", { x1: X(0), y1: Y(ai(0)), x2: X(xMax), y2: Y(ai(xMax)), stroke: "#C2456A", "stroke-width": 3.5, "stroke-dasharray": "9 6", "stroke-linecap": "round" }));
+
+    // city dots
+    var cities = [
+      { name: "Atlanta", w: state.atl.wage, r: atl },
+      { name: "Casablanca", w: state.cas.wage, r: cas }
+    ];
+    cities.forEach(function (c) {
+      var x = X(c.w), ya = Y(ai(c.w)), yp = Y(person(c.w));
+      g.appendChild(node("line", { x1: x, x2: x, y1: ya, y2: yp, stroke: "#4A2C38", "stroke-width": 1.5, opacity: 0.6 }));
+      g.appendChild(node("circle", { cx: x, cy: yp, r: 4, fill: "#fff", stroke: "#4A2C38", "stroke-width": 2 }));
+      g.appendChild(node("circle", { cx: x, cy: ya, r: 7, fill: "#FFB7C5", stroke: "#4A2C38", "stroke-width": 2.5 }));
+    });
+    // labels last so they sit on top; Casablanca label below its dots, Atlanta above.
+    cities.forEach(function (c, i) {
+      var x = X(c.w);
+      var yTopDot = Math.min(Y(ai(c.w)), Y(person(c.w)));
+      var yBotDot = Math.max(Y(ai(c.w)), Y(person(c.w)));
+      var anchor = x < m.l + 40 ? "start" : (x > m.l + pw - 60 ? "end" : "middle");
+      var dx = anchor === "start" ? -6 : 0;
+      var above = i === 0 || yBotDot + 24 > m.t + ph;
+      var ty = above ? yTopDot - 14 : yBotDot + 22;
+      if (above && ty < m.t + 30) ty = yBotDot + 22;
+      g.appendChild(node("text", { x: x + dx, y: ty, "text-anchor": anchor, "font-weight": 700, "class": "halo" }, c.name + " " + fmtMoney(c.w)));
+    });
+
+    var desc = "Person alone and AI plus checking cost per task for wages from $0 to $" + xMax + ". " +
+      (be === null ? "AI never breaks even. " : "Lines cross at a break-even wage of " + fmtMoney(be) + " per hour. ") +
+      "Atlanta at " + fmtMoney(state.atl.wage) + ": person " + fmtMoney(atl.humanCost) + ", AI " + fmtMoney(atl.aiCost) + ". " +
+      "Casablanca at " + fmtMoney(state.cas.wage) + ": person " + fmtMoney(cas.humanCost) + ", AI " + fmtMoney(cas.aiCost) + ".";
+    $("chartDesc").textContent = desc;
+
+    var notes = [];
+    if (be === null) notes.push("AI never breaks even: checking takes as long as doing the task.");
+    else if (be > xMax) notes.push("Break-even wage (" + fmtMoney(be) + "/h) is off the right edge of the chart.");
+    if (state.atl.minutes !== state.cas.minutes) notes.push("The cities use different task times; the chart uses Atlanta's " + mins + " minutes. Each card shows its own break-even.");
+    $("chartNote").textContent = notes.join(" ");
+  }
+
+  function update() {
+    var st = getState();
+    var atl = computeCity(st.shared, st.atl);
+    var cas = computeCity(st.shared, st.cas);
+    renderCard($("atl-card"), "Atlanta, USA", atl, st.shared);
+    renderCard($("cas-card"), "Casablanca, Morocco", cas, st.shared);
+    renderChart(st, atl, cas);
+  }
+
+  ids.forEach(function (id) {
+    var el = $(id);
+    el.addEventListener("input", update);
+    // On leaving a field, replace empty/negative/too-large values with the safe value.
+    el.addEventListener("change", function () {
+      var v = read(id);
+      if (parseFloat(el.value) !== v) el.value = v;
+      update();
+    });
+  });
+  $("resetBtn").addEventListener("click", function () { fill(); update(); });
+
+  var resizeTimer;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(update, 100);
+  });
+
+  fill();
+  update();
+})();
+</script>
+</body>
+</html>
